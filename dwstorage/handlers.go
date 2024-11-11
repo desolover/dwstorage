@@ -50,7 +50,7 @@ func (fs *FileOperationsServer) WrapHandler(f HandlerFunc) http.HandlerFunc {
 	}
 }
 func uploadHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Request) (any, error) {
-	formFile, _, err := r.FormFile(`file`)
+	formFile, _, err := r.FormFile(`filename`)
 	if err != nil {
 		return http.StatusBadRequest, errors.New(`param 'file' is invalid (must be a multipart-form file)`)
 	}
@@ -121,13 +121,13 @@ func uploadHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Requ
 	}
 
 	type response struct {
-		Name string `json:"name"`
+		Name string `json:"filename"`
 	}
 	return response{Name: fileName}, nil
 }
 
 func downloadHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Request) (any, error) {
-	fileName := r.URL.Query().Get("file")
+	fileName := r.URL.Query().Get("filename")
 	if len(fileName) < 2 {
 		return http.StatusBadRequest, errors.New(`too short file name (url-value 'file')`)
 	}
@@ -158,7 +158,7 @@ func downloadHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Re
 }
 
 func deleteHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Request) (any, error) {
-	fileName := r.URL.Query().Get("file")
+	fileName := r.URL.Query().Get("filename")
 	if len(fileName) < 2 {
 		return http.StatusBadRequest, errors.New(`too short file name (url-value 'file')`)
 	}
@@ -204,7 +204,7 @@ func deleteHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Requ
 }
 
 func infoHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Request) (any, error) {
-	fileName := r.URL.Query().Get("file")
+	fileName := r.URL.Query().Get("filename")
 	if len(fileName) < 2 {
 		return http.StatusBadRequest, errors.New(`too short file name (url-value 'file')`)
 	}

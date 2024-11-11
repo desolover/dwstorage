@@ -8,7 +8,7 @@ import (
 
 // FileEntity сущность с мета-данными файла, которая хранится в Redis.
 type FileEntity struct {
-	Name           string    `json:"name" redis:"name"`
+	Name           string    `json:"filename" redis:"filename"`
 	UploadDate     time.Time `json:"upload_date" redis:"upload_date"`
 	RemoveDate     time.Time `json:"remove_date" redis:"remove_date"`
 	IsRemoved      bool      `json:"is_removed" redis:"is_removed"`
