@@ -10,7 +10,7 @@ import (
 type FileEntity struct {
 	Name           string    `json:"filename" redis:"filename"`
 	UploadDate     time.Time `json:"upload_date" redis:"upload_date"`
-	RemoveDate     time.Time `json:"remove_date" redis:"remove_date"`
+	RemoveDate     time.Time `json:"remove_date" redis:"remove_date,omitempty"`
 	IsRemoved      bool      `json:"is_removed" redis:"is_removed"`
 	DownloadsCount int       `json:"downloads_count" redis:"downloads_count"`
 }

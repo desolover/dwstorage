@@ -3,6 +3,7 @@ package dwstorage
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -49,15 +50,22 @@ func (fs *FileOperationsServer) WrapHandler(f HandlerFunc) http.HandlerFunc {
 		w.Write(jsonResp)
 	}
 }
+
+type UploadHandlerResponse struct {
+	Filename string `json:"filename"`
+}
+
 func uploadHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Request) (any, error) {
-	formFile, _, err := r.FormFile(`filename`)
+	formFile, _, err := r.FormFile(`file`)
 	if err != nil {
-		return http.StatusBadRequest, errors.New(`param 'file' is invalid (must be a multipart-form file)`)
+		return http.StatusBadRequest, fmt.Errorf(`param 'file' is invalid (must be a multipart-form file): %e`, err)
 	}
 
 	fileData, err := io.ReadAll(formFile)
 	if err != nil {
 		return http.StatusInternalServerError, err
+	} else if len(fileData) == 0 {
+		return http.StatusBadRequest, errors.New(`param 'file' is empty`)
 	}
 
 	if code, err := fs.checkLimitError(r, UploadOperationIndex, len(fileData)); err != nil {
@@ -120,10 +128,7 @@ func uploadHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Requ
 		return http.StatusInternalServerError, err
 	}
 
-	type response struct {
-		Name string `json:"filename"`
-	}
-	return response{Name: fileName}, nil
+	return UploadHandlerResponse{Filename: fileName}, nil
 }
 
 func downloadHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Request) (any, error) {
