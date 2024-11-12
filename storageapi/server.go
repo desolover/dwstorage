@@ -1,4 +1,4 @@
-package dwstorage
+package storageapi
 
 import (
 	"context"

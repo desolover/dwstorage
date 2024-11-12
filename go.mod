@@ -1,4 +1,4 @@
-module github.com/desolover/telegue
+module github.com/desolover/dwstorage
 
 go 1.23.3
 

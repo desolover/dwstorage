@@ -7,7 +7,7 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/desolover/telegue/dwstorage"
+	"github.com/desolover/dwstorage/storageapi"
 )
 
 func main() {
@@ -24,17 +24,17 @@ func main() {
 	flag.IntVar(&bpsLimit, "bps", 1000000, "bytes per second limit")
 	flag.Parse()
 
-	server, err := dwstorage.NewFileOperationsServer(workingDir, redisConn, ":"+strconv.Itoa(port))
+	server, err := storageapi.NewFileOperationsServer(workingDir, redisConn, ":"+strconv.Itoa(port))
 	if err != nil {
 		log.Fatalln(err)
 	}
 	server.WorkingDir = workingDir
 	server.RPSLimit = rpsLimit
 	server.BPSLimit = bpsLimit
-	server.PreMiddlewareFunctions = []dwstorage.PreMiddlewareFunc{
+	server.PreMiddlewareFunctions = []storageapi.PreMiddlewareFunc{
 		capitalize,
 	}
-	server.PostMiddlewareFunctions = []dwstorage.PostMiddlewareFunc{
+	server.PostMiddlewareFunctions = []storageapi.PostMiddlewareFunc{
 		printToLog,
 	}
 	if err := server.Start(context.Background()); err != nil {

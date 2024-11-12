@@ -1,4 +1,4 @@
-package dwstorage
+package storageapi
 
 import (
 	"encoding/json"
@@ -218,6 +218,7 @@ func infoHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Reques
 		return code, err
 	}
 
+	// если режим без Redis'а - выдаст пустой ответ
 	info, err := fs.loadRedisFileEntity(r.Context(), fileName)
 	if err == ErrFileEntityNotFound {
 		return http.StatusNotFound, err
