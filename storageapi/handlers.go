@@ -22,8 +22,9 @@ type HandlerFunc func(fs *FileOperationsServer, w http.ResponseWriter, r *http.R
 // PreMiddlewareFunc функция для pre-обработки файла - будет вызываться перед его сохранения с возможностью изменить данные.
 type PreMiddlewareFunc func(data []byte) ([]byte, error)
 
-// PostMiddlewareFunc функция для pre-обработки файла - будет вызываться после его сохранения.
-// TODO возможен другой вариант, где пост-обработчику передаются не данные файла, а путь сохранённого файла на диске.
+// PostMiddlewareFunc функция для post-обработки файла - будет вызываться после его сохранения.
+// TODO возможен другой вариант, где пост-обработчику передаются не данные файла,
+// а путь сохранённого файла на диске (тогда в случае модификации файла придётся отказаться от распараллеливания работы с ним).
 type PostMiddlewareFunc func(data []byte) error
 
 func (fs *FileOperationsServer) WrapHandler(f HandlerFunc) http.HandlerFunc {
@@ -87,7 +88,7 @@ func uploadHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Requ
 	for {
 		// в цикле, т.к. теоретически возможно совпадение с названием уже существующего файла
 		fileName = uuid.New().String()
-		dirPath := fs.WorkingDir + fileName[:2]
+		dirPath := fs.WorkingDir + getDirectoryName(fileName)
 		if err := os.Mkdir(dirPath, os.ModePerm); err != nil && !os.IsExist(err) {
 			return http.StatusInternalServerError, err
 		}
@@ -136,7 +137,7 @@ func downloadHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Re
 	if len(fileName) < 2 {
 		return http.StatusBadRequest, errors.New(`too short file name (url-value 'file')`)
 	}
-	dirPath := fs.WorkingDir + fileName[:2]
+	dirPath := fs.WorkingDir + getDirectoryName(fileName)
 	filePath := dirPath + `/` + fileName
 
 	// TODO быть может, более целесообразно вместо двух запросов к ОС использовать один - сразу читать файл
@@ -168,8 +169,9 @@ func deleteHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Requ
 		return http.StatusBadRequest, errors.New(`too short file name (url-value 'file')`)
 	}
 
-	fileDir := fs.WorkingDir + fileName[:2]
-	filePath := fs.WorkingDir + fileName[:2] + `/` + fileName
+	dirName := getDirectoryName(fileName)
+	fileDir := fs.WorkingDir + dirName
+	filePath := fs.WorkingDir + dirName + `/` + fileName
 	// Проверка "байт в секунду" при удалении - немножко странная метрика, но тоже сделана.
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
@@ -193,7 +195,7 @@ func deleteHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Requ
 	}
 	if len(dir) == 0 {
 		// потенциально возможна некая гонка состояний,
-		// но к сожалению, не получается использовать os.Remove(), который бы удалял директорию, лишь она пустая,
+		// но к сожалению, не получается использовать os.Remove(), который бы удалял директорию, лишь если она пустая,
 		// под Windows - ошибку не выдаёт, но и удаления директории тоже не происходит
 		if err := os.RemoveAll(fileDir); err != nil {
 			// ошибку можно залогировать, но не возвращать
@@ -218,6 +220,10 @@ func infoHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Reques
 		return code, err
 	}
 
+	if fs.redisClient == nil {
+		return http.StatusMethodNotAllowed, errors.New("service is running in without-meta-data-mode")
+	}
+
 	// если режим без Redis'а - выдаст пустой ответ
 	info, err := fs.loadRedisFileEntity(r.Context(), fileName)
 	if err == ErrFileEntityNotFound {
@@ -234,11 +240,15 @@ func (fs *FileOperationsServer) checkLimitError(r *http.Request, operation int, 
 		return http.StatusInternalServerError, err
 	}
 
-	rpsLimited, bpsLimited := fs.IsRequestAllowed(ClientOperationKey{IP: ip, Operation: operation}, dataLength)
-	if rpsLimited {
+	isRPSLimited, isBPSLimited := fs.IsRequestAllowed(ClientOperationKey{IP: ip, Operation: operation}, dataLength)
+	if isRPSLimited {
 		return http.StatusTooManyRequests, errors.New("too many requests per second")
-	} else if bpsLimited {
+	} else if isBPSLimited {
 		return http.StatusTooManyRequests, errors.New("too many bytes per second")
 	}
 	return 0, nil
+}
+
+func getDirectoryName(fileName string) string {
+	return string([]rune(fileName)[:2])
 }
