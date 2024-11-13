@@ -224,7 +224,6 @@ func infoHandler(fs *FileOperationsServer, _ http.ResponseWriter, r *http.Reques
 		return http.StatusMethodNotAllowed, errors.New("service is running in without-meta-data-mode")
 	}
 
-	// если режим без Redis'а - выдаст пустой ответ
 	info, err := fs.loadRedisFileEntity(r.Context(), fileName)
 	if err == ErrFileEntityNotFound {
 		return http.StatusNotFound, err
